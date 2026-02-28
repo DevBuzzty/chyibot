@@ -10,9 +10,7 @@ import { Sandbox } from '../core/sandbox.js';
 import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
-import util from 'util';
-
-const execPromise = util.promisify(exec);
+import chalk from 'chalk';
 
 export interface AgentConfig {
     id: string;
@@ -48,29 +46,34 @@ export class AgentOrchestrator {
     this.toolRegistry.register(sandboxBashTool);
     this.toolRegistry.register(renderCanvasTool);
 
-    this.agents.set('main', {
-        id: 'main',
-        provider: this.anthropic ? 'anthropic' : 'openai',
-        model: this.anthropic ? 'claude-3-5-sonnet-20240620' : 'gpt-4o',
-        systemPrompt: "You are Chyi, a highly capable personal AI agent. Use tools to satisfy the user request."
-    });
+    if (this.anthropic || this.openai) {
+        this.agents.set('main', {
+            id: 'main',
+            provider: this.anthropic ? 'anthropic' : 'openai',
+            model: this.anthropic ? 'claude-3-5-sonnet-20240620' : 'gpt-4o',
+            systemPrompt: "You are Chyi, a highly capable personal AI agent. Use tools to satisfy the user request."
+        });
+    }
   }
 
   async processMessage(msg: InboundMessage): Promise<string> {
+    if (!this.anthropic && !this.openai) {
+        return "System error: No AI providers configured. Please run `chyi onboard` and provide an Anthropic or OpenAI API key.";
+    }
+
     const sessionId = `${msg.platform}_${msg.peerId}`;
     const agentConfig = this.agents.get('main')!;
 
     if (msg.text.trim() === '/update') {
-      console.log('Update command received via chat. Triggering self-update...');
+      console.log(chalk.cyan('Update command received via chat. Triggering self-update...'));
       const projectRoot = process.cwd();
 
-      // Run update in background and return immediate response
-      exec(`git pull origin main && npm install && npm run build`, { cwd: projectRoot }, (err, stdout, stderr) => {
+      exec(`git pull origin main && npm install && npm run build`, { cwd: projectRoot }, (err) => {
           if (err) {
-              console.error('Self-update failed:', err);
+              console.error(chalk.red('Self-update failed:'), err);
           } else {
-              console.log('Self-update successful. Restarting daemon...');
-              process.exit(0); // Assume a process manager like systemd will restart it
+              console.log(chalk.green('Self-update successful. Restarting daemon...'));
+              process.exit(0);
           }
       });
 
@@ -96,6 +99,8 @@ export class AgentOrchestrator {
 
       while (turn < MAX_TURNS) {
         turn++;
+        console.log(chalk.gray(`Agent Loop: Turn ${turn} for session ${sessionId}`));
+
         let responseContent: any;
         if (agentConfig.provider === 'anthropic' && this.anthropic) {
           const resp = await this.anthropic.messages.create({
@@ -142,9 +147,12 @@ export class AgentOrchestrator {
 
         const toolCalls = responseContent.filter((c: any) => c.type === 'tool_use');
         if (toolCalls.length === 0) {
-            return responseContent.filter((c: any) => c.type === 'text').map((t: any) => t.text).join('\n') || "Done.";
+            const finalReply = responseContent.filter((c: any) => c.type === 'text').map((t: any) => t.text).join('\n');
+            console.log(chalk.gray(`Agent Loop: Finished with reply: ${finalReply}`));
+            return finalReply || "Done.";
         }
 
+        console.log(chalk.cyan(`Agent Loop: Executing ${toolCalls.length} tool calls...`));
         const toolResults = await Promise.all(toolCalls.map(async (tc: any) => {
             const tool = this.toolRegistry.getTool(tc.name);
             if (!tool) return { type: 'tool_result', tool_use_id: tc.id, content: `Error: Tool ${tc.name} not found.` };
@@ -164,9 +172,9 @@ export class AgentOrchestrator {
         messages.push({ role: 'user', content: toolResults as any });
       }
       return "Reached maximum tool execution turns. Please refine your request.";
-    } catch (err) {
-      console.error('API error:', err);
-      return "Error processing request.";
+    } catch (err: any) {
+      console.error(chalk.red('Agent Execution Error:'), err);
+      return `Error processing request: ${err.message}`;
     }
   }
 }

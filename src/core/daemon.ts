@@ -47,16 +47,23 @@ async function initDB() {
 }
 
 async function handleInboundMessage(msg: InboundMessage) {
-  console.log(chalk.magenta(`[${msg.platform}] Message from ${msg.senderId}: ${msg.text}`));
+  try {
+    console.log(chalk.magenta(`[${msg.platform}] Inbound message from ${msg.senderId}: ${msg.text}`));
 
-  if (agentOrchestrator) {
-    const responseText = await agentOrchestrator.processMessage(msg);
+    if (agentOrchestrator) {
+      const responseText = await agentOrchestrator.processMessage(msg);
+      console.log(chalk.blue(`[${msg.platform}] Sending response to ${msg.senderId}: ${responseText.substring(0, 50)}...`));
 
-    if (msg.platform === 'telegram' && telegramAdapter) {
-      await telegramAdapter.sendMessage(msg.peerId, responseText);
-    } else if (msg.platform === 'discord' && discordAdapter) {
-      await discordAdapter.sendMessage(msg.peerId, responseText);
+      if (msg.platform === 'telegram' && telegramAdapter) {
+        await telegramAdapter.sendMessage(msg.peerId, responseText);
+      } else if (msg.platform === 'discord' && discordAdapter) {
+        await discordAdapter.sendMessage(msg.peerId, responseText);
+      }
+    } else {
+        console.error(chalk.red('Agent Orchestrator not initialized.'));
     }
+  } catch (e) {
+      console.error(chalk.red(`Failed to handle inbound message from ${msg.platform}:`), e);
   }
 }
 
@@ -75,13 +82,11 @@ async function startDaemon() {
   const db = await initDB();
   console.log(chalk.blue('Database initialized.'));
 
-  if (ANTHROPIC_API_KEY || OPENAI_API_KEY) {
-    agentOrchestrator = new AgentOrchestrator({
-        anthropicKey: ANTHROPIC_API_KEY,
-        openaiKey: OPENAI_API_KEY
-    }, broadcastCanvasUpdate);
-    console.log(chalk.blue('Agent orchestrator initialized with multiple providers.'));
-  }
+  agentOrchestrator = new AgentOrchestrator({
+      anthropicKey: ANTHROPIC_API_KEY,
+      openaiKey: OPENAI_API_KEY
+  }, broadcastCanvasUpdate);
+  console.log(chalk.blue('Agent orchestrator initialized.'));
 
   const app = express();
   app.use(express.static(path.join(process.cwd(), 'src/ui')));
@@ -92,12 +97,16 @@ async function startDaemon() {
 
   if (TELEGRAM_TOKEN) {
     telegramAdapter = new TelegramAdapter(TELEGRAM_TOKEN);
-    telegramAdapter.start(handleInboundMessage).catch(err => console.error('Telegram start failed:', err));
+    telegramAdapter.start(handleInboundMessage).catch(err => console.error(chalk.red('Telegram start failed:'), err));
+  } else {
+      console.warn(chalk.yellow('TELEGRAM_BOT_TOKEN not provided. Telegram adapter disabled.'));
   }
 
   if (DISCORD_TOKEN) {
     discordAdapter = new DiscordAdapter(DISCORD_TOKEN);
-    discordAdapter.start(handleInboundMessage).catch(err => console.error('Discord start failed:', err));
+    discordAdapter.start(handleInboundMessage).catch(err => console.error(chalk.red('Discord start failed:'), err));
+  } else {
+      console.warn(chalk.yellow('DISCORD_BOT_TOKEN not provided. Discord adapter disabled.'));
   }
 
   server.on('upgrade', (request, socket, head) => {
@@ -150,7 +159,7 @@ async function startDaemon() {
           return;
         }
 
-        console.log(chalk.cyan('Received message:'), message);
+        console.log(chalk.cyan('Received control message:'), message);
       } catch (e) {
         console.error(chalk.red('Failed to parse message:'), e);
       }
