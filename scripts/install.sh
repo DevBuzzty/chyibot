@@ -41,14 +41,18 @@ if [ ! -f "package.json" ]; then
     cd chyi
 fi
 
+# Ensure we are in the project root
+INSTALL_PATH=$(pwd)
+
 npm install
 npm run build
 
-# Link binary globally
-echo "Linking chyi binary globally..."
-sudo ln -sf $(pwd)/bin/chyi.js /usr/local/bin/chyi
-sudo chmod +x /usr/local/bin/chyi
+# Link binary globally with absolute path
+echo "Linking chyi binary globally from ${INSTALL_PATH}..."
+sudo ln -sf "${INSTALL_PATH}/bin/chyi.js" /usr/local/bin/chyi
+sudo chmod +x "${INSTALL_PATH}/bin/chyi.js"
 
 echo "--- Installation complete! ---"
+echo "The 'chyi' command is now available globally."
 echo "To configure Chyi, run: chyi onboard"
 echo "To start the gateway, run: chyi start -d"

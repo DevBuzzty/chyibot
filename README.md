@@ -48,20 +48,41 @@ Once configured, start the Chyi daemon in the background:
 chyi start -d
 ```
 
-You can check the status at any time:
-```bash
-chyi status
-```
+---
+
+## 🛠 Exhaustive Command Reference
+
+### Command Line Interface (CLI)
+
+The `chyi` command is available globally on your server.
+
+- **`chyi onboard`**: Interactive setup wizard to configure API keys, messaging tokens, and security settings.
+- **`chyi start`**: Starts the Gateway daemon.
+    - `-d, --daemon`: Runs the process in the background.
+- **`chyi status`**: Checks if Chyi is properly configured and if the `.env` file is present.
+- **`chyi security`**: Runs a security audit to verify filesystem permissions and configuration integrity.
+- **`chyi update`**: Pulls the latest code from GitHub, installs new dependencies, and rebuilds the project.
+- **`chyi --version`**: Displays the current version of Chyi.
+- **`chyi --help`**: Lists all available subcommands.
+
+### Chat-Based Commands
+
+You can send these commands directly to your bot on Telegram or Discord:
+
+- **`/update`**: Triggers Chyi to pull the latest version from GitHub, rebuild, and restart itself remotely.
 
 ---
 
-## 🛠 Management Commands
+## 🧰 AI Agent Capabilities (Skills & Tools)
 
-Chyi comes with a robust CLI utility for daily operations:
+Your Chyi agent is equipped with the following tools, which it uses autonomously to fulfill your requests:
 
-- **Security Audit**: `chyi security` - Probes your setup for vulnerabilities.
-- **Update Chyi**: `chyi update` - Pulls the latest version from GitHub and rebuilds.
-- **Agent Interaction**: Send `/update` to your bot on Telegram or Discord to initiate a remote update.
+- **`bash`**: Executes shell commands within a secure, isolated Docker sandbox.
+- **`read_file`**: Reads the content of a file within the safe `workspace/` directory.
+- **`write_file`**: Writes or overwrites content to a file in the `workspace/` directory (protected against directory traversal).
+- **`render_canvas`**: Pushes dynamic, declarative UI components (Cards, Columns, Text) to your web dashboard.
+
+---
 
 ## 🎨 Canvas Dashboard
 
