@@ -27,11 +27,10 @@ curl -fsSL https://raw.githubusercontent.com/DevBuzzty/chyibot/main/scripts/inst
 
 ### 2. Run the Onboarding Wizard
 
-Navigate to the `chyi` directory and start the interactive configuration:
+Once the installation is complete, you can run the interactive configuration from any directory:
 
 ```bash
-cd chyi
-./bin/chyi.js onboard
+chyi onboard
 ```
 
 The wizard will guide you through:
@@ -46,12 +45,12 @@ The wizard will guide you through:
 Once configured, start the Chyi daemon in the background:
 
 ```bash
-./bin/chyi.js start -d
+chyi start -d
 ```
 
 You can check the status at any time:
 ```bash
-./bin/chyi.js status
+chyi status
 ```
 
 ---

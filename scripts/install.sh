@@ -44,6 +44,11 @@ fi
 npm install
 npm run build
 
+# Link binary globally
+echo "Linking chyi binary globally..."
+sudo ln -sf $(pwd)/bin/chyi.js /usr/local/bin/chyi
+sudo chmod +x /usr/local/bin/chyi
+
 echo "--- Installation complete! ---"
-echo "To configure Chyi, run: ./bin/chyi.js onboard"
-echo "To start the gateway, run: ./bin/chyi.js start -d"
+echo "To configure Chyi, run: chyi onboard"
+echo "To start the gateway, run: chyi start -d"

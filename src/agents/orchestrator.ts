@@ -9,6 +9,10 @@ import { renderCanvasTool } from '../tools/ui.js';
 import { Sandbox } from '../core/sandbox.js';
 import path from 'path';
 import fs from 'fs';
+import { exec } from 'child_process';
+import util from 'util';
+
+const execPromise = util.promisify(exec);
 
 export interface AgentConfig {
     id: string;
@@ -57,7 +61,20 @@ export class AgentOrchestrator {
     const agentConfig = this.agents.get('main')!;
 
     if (msg.text.trim() === '/update') {
-      return "Update requested. Please run `chyi update` on the server.";
+      console.log('Update command received via chat. Triggering self-update...');
+      const projectRoot = process.cwd();
+
+      // Run update in background and return immediate response
+      exec(`git pull origin main && npm install && npm run build`, { cwd: projectRoot }, (err, stdout, stderr) => {
+          if (err) {
+              console.error('Self-update failed:', err);
+          } else {
+              console.log('Self-update successful. Restarting daemon...');
+              process.exit(0); // Assume a process manager like systemd will restart it
+          }
+      });
+
+      return "Self-update initiated. I will pull the latest version, rebuild, and restart. Please wait a moment.";
     }
 
     await this.sessionManager.appendMessage(sessionId, {
@@ -74,7 +91,11 @@ export class AgentOrchestrator {
     }));
 
     try {
-      while (true) {
+      let turn = 0;
+      const MAX_TURNS = 10;
+
+      while (turn < MAX_TURNS) {
+        turn++;
         let responseContent: any;
         if (agentConfig.provider === 'anthropic' && this.anthropic) {
           const resp = await this.anthropic.messages.create({
@@ -112,7 +133,6 @@ export class AgentOrchestrator {
           }
         }
 
-        // Save assistant turn
         await this.sessionManager.appendMessage(sessionId, {
             role: 'assistant',
             content: responseContent,
@@ -136,14 +156,14 @@ export class AgentOrchestrator {
             }
         }));
 
-        // Save tool result turn (as user for Anthropic, as tool for OpenAI internally but we unify)
         await this.sessionManager.appendMessage(sessionId, {
-            role: 'user', // Unified for Anthropic tool result history
+            role: 'user',
             content: toolResults as any,
             timestamp: Date.now()
         });
         messages.push({ role: 'user', content: toolResults as any });
       }
+      return "Reached maximum tool execution turns. Please refine your request.";
     } catch (err) {
       console.error('API error:', err);
       return "Error processing request.";

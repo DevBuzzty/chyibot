@@ -7,6 +7,7 @@ import { onboard } from './onboard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '../../');
 
 const program = new Command();
 
@@ -28,7 +29,7 @@ program
   .description('Check the status of Chyi')
   .action(() => {
     console.log(chalk.cyan('Checking Chyi status...'));
-    const envExists = fs.existsSync('.env');
+    const envExists = fs.existsSync(path.join(PROJECT_ROOT, '.env'));
     if (envExists) {
       console.log(chalk.green('[OK] .env file found.'));
     } else {
@@ -41,13 +42,13 @@ program
   .description('Run security audit')
   .action(() => {
     console.log(chalk.cyan('Running security audit...'));
-    const envExists = fs.existsSync('.env');
+    const envExists = fs.existsSync(path.join(PROJECT_ROOT, '.env'));
     if (envExists) {
       console.log(chalk.green('[OK] .env file found.'));
     } else {
       console.log(chalk.red('[ERROR] .env file missing. Run "chyi onboard".'));
     }
-    const dbExists = fs.existsSync('chyi.db');
+    const dbExists = fs.existsSync(path.join(PROJECT_ROOT, 'chyi.db'));
     if (dbExists) {
       console.log(chalk.green('[OK] Database found.'));
     }
@@ -59,11 +60,11 @@ program
   .description('Update Chyi from the GitHub repository')
   .action(async () => {
     const { execSync } = await import('child_process');
-    console.log(chalk.cyan('Updating Chyi...'));
+    console.log(chalk.cyan('Updating Chyi in ' + PROJECT_ROOT));
     try {
-      execSync('git pull origin main', { stdio: 'inherit' });
-      execSync('npm install', { stdio: 'inherit' });
-      execSync('npm run build', { stdio: 'inherit' });
+      execSync('git pull origin main', { stdio: 'inherit', cwd: PROJECT_ROOT });
+      execSync('npm install', { stdio: 'inherit', cwd: PROJECT_ROOT });
+      execSync('npm run build', { stdio: 'inherit', cwd: PROJECT_ROOT });
       console.log(chalk.green('Update complete! Restart the daemon for changes to take effect.'));
     } catch (e) {
       console.error(chalk.red('Update failed:'), e);
@@ -77,8 +78,8 @@ program
   .action(async (options) => {
     const { spawn } = await import('child_process');
 
-    const distPath = path.resolve(__dirname, '../core/daemon.js');
-    const srcPath = path.resolve(__dirname, '../core/daemon.ts');
+    const distPath = path.resolve(PROJECT_ROOT, 'dist/core/daemon.js');
+    const srcPath = path.resolve(PROJECT_ROOT, 'src/core/daemon.ts');
 
     console.log(chalk.green('Starting Chyi gateway daemon...'));
 
@@ -86,7 +87,8 @@ program
     if (fs.existsSync(distPath)) {
       child = spawn('node', [distPath], {
         detached: options.daemon,
-        stdio: options.daemon ? 'ignore' : 'inherit'
+        stdio: options.daemon ? 'ignore' : 'inherit',
+        cwd: PROJECT_ROOT
       });
     } else {
       child = spawn('node', [
@@ -95,7 +97,8 @@ program
         srcPath
       ], {
         detached: options.daemon,
-        stdio: options.daemon ? 'ignore' : 'inherit'
+        stdio: options.daemon ? 'ignore' : 'inherit',
+        cwd: PROJECT_ROOT
       });
     }
 
