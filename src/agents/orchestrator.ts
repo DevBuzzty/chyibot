@@ -68,7 +68,7 @@ export class AgentOrchestrator {
       console.log(chalk.cyan('Update command received via chat. Triggering self-update...'));
       const projectRoot = process.cwd();
 
-      exec(`git pull origin main && npm install && npm run build`, { cwd: projectRoot }, (err) => {
+      exec(`git pull && npm install && npm run build`, { cwd: projectRoot }, (err) => {
           if (err) {
               console.error(chalk.red('Self-update failed:'), err);
           } else {

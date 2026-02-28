@@ -62,12 +62,14 @@ program
     const { execSync } = await import('child_process');
     console.log(chalk.cyan('Updating Chyi in ' + PROJECT_ROOT));
     try {
-      execSync('git pull origin main', { stdio: 'inherit', cwd: PROJECT_ROOT });
+      // Use branch-agnostic git pull
+      execSync('git pull', { stdio: 'inherit', cwd: PROJECT_ROOT });
       execSync('npm install', { stdio: 'inherit', cwd: PROJECT_ROOT });
       execSync('npm run build', { stdio: 'inherit', cwd: PROJECT_ROOT });
       console.log(chalk.green('Update complete! Restart the daemon for changes to take effect.'));
     } catch (e) {
-      console.error(chalk.red('Update failed:'), e);
+      console.error(chalk.red('Update failed. Ensure you are in a git repository and origin is set.'));
+      console.error(e);
     }
   });
 
